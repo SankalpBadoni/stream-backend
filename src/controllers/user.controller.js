@@ -90,7 +90,7 @@ const registerUser = asyncHandler( async(req, res) => {
 const loginUser = asyncHandler( async(req,res)=> {
     const{email, username, password} = req.body
 
-    if(!username || !email){
+    if (!username && !email) {
         throw new ApiError(400, "username or email is required")
     }
     const user = await User.findOne({
@@ -105,12 +105,16 @@ const loginUser = asyncHandler( async(req,res)=> {
         throw new ApiError(401, 'Password Incorrect')
     }
 
-    const{accesstoken, refreshtoken} = generateAccessAndRefreshToken(user._id)
+    const accesstoken = user.generateAccessToken();
+    const refreshtoken = user.generateRefreshToken();
+    console.log('Access Token:', accesstoken);
+    console.log('Refresh Token:', refreshtoken);
     const loggedinUser = await User.findById(user._id).select("-password -refreshToken")
 
     const options = {
         httpOnly : true,
-        secure : true
+        secure : false,
+        sameSite: 'Lax'
     }
 
     return res.status(200)
@@ -143,7 +147,7 @@ const logoutUser = asyncHandler(async(req,res)=> {
     
     const options = {
         httpOnly : true,
-        secure : true
+        secure : process.env.NODE_ENV === "production",
     }
     return res.status(200)
     .clearCookie("accesstoken", options)
